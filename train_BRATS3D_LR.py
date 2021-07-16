@@ -1,27 +1,27 @@
 from __future__ import print_function
+
 import argparse
-import os,sys
+import os
 import time
+
 import numpy as np
-
 import torch
-import torch.nn as nn
-import torch.optim as optim
 import torch.backends.cudnn as cudnn
-from torch.utils.data import DataLoader
+import torch.nn as nn
 import torch.nn.functional as F
-
-from MEGAN.networks3D_LR import define_D, GANLoss, define_G_LR
-from MEGAN.dataset import MedicalImageDataset3D
-from MEGAN.network_utils import print_network,set_requires_grad
+import torch.optim as optim
+from .dataset import MedicalImageDataset3D
 from MEGAN.image_utils import save_image
+from MEGAN.network_utils import print_network, set_requires_grad
+from MEGAN.networks3D_LR import define_D, GANLoss, define_G_LR
+from torch.utils.data import DataLoader
 
 """Train generating scale 0. We are aiming to learn a low-resolution image (LRI) from a low-resolution image edges (LRE)"""
 # Training settings
 parser = argparse.ArgumentParser(description='Training lowest resolution')
 parser.add_argument('--data_root', type=str, default='../Data', help='root directory of the dataset')
-parser.add_argument('--results_root',type=str, default='../Results',help='root directory for saving results')
-parser.add_argument('--experiment_type',type=str,default='SKETCH2BRATST23D',
+parser.add_argument('--results_root', type=str, default='../Results', help='root directory for saving results')
+parser.add_argument('--experiment_type', type=str, default='SKETCH2BRATST23D',
                     help='name of experiment (also name of folders)')
 parser.add_argument('--batch_size', type=int, default=1, help='training batch size')
 parser.add_argument('--img_size', type=int, default=64, help='size of downsampled image')
@@ -31,10 +31,10 @@ parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for adam. de
 parser.add_argument('--seed', type=int, default=42, help='random seed to use. Default=123')
 parser.add_argument('--lamb', type=int, default=10, help='weight on L1 term in objective')
 parser.add_argument('--device', type=int, default=0, help="Device nr (def: 0)")
-parser.add_argument('--pixel_loss', type=str,default='L1',help='pixel level loss. Possible: L1, MSE')
-parser.add_argument('--start_epoch',type=int, default=0,
+parser.add_argument('--pixel_loss', type=str, default='L1', help='pixel level loss. Possible: L1, MSE')
+parser.add_argument('--start_epoch', type=int, default=0,
                     help='Define whether to start from scratch (epoch 0) or used saved epochs')
-parser.add_argument('--scale_edges',type=int, default=2,
+parser.add_argument('--scale_edges', type=int, default=2,
                     help='factor for scaling edge image. If < 2, no scaling is done.')
 parser.add_argument('--level_name', type=str, default='LR',
                     help='creates an output folder with this name for each scale')
@@ -43,42 +43,42 @@ opt = parser.parse_args()
 
 print(opt)
 
-batch_size=opt.batch_size
+batch_size = opt.batch_size
 cudnn.benchmark = True
 torch.manual_seed(opt.seed)
-device=torch.device('cuda', opt.device)
+device = torch.device('cuda', opt.device)
 
 with torch.cuda.device(opt.device):
     print('===> Loading datasets')
     input_dir = os.path.join(opt.data_root, opt.experiment_type)
-    output_dir=os.path.join(opt.results_root, opt.experiment_type + '_' + opt.level_name)
+    output_dir = os.path.join(opt.results_root, opt.experiment_type + '_' + opt.level_name)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    val_out_dir=os.path.join(output_dir, 'Val')
+    val_out_dir = os.path.join(output_dir, 'Val')
     if not os.path.exists(val_out_dir):
         os.makedirs(val_out_dir)
 
-    #we chose the edge image to be 2x the LR image size sind  otherwise edges disappear
-    if opt.scale_edges>1:
-        new_size_edges=opt.scale_edges*opt.img_size
-    traindataset=MedicalImageDataset3D(input_dir, mode="train", listname='data_list.txt', new_size_imgs=opt.img_size,
-                                       new_size_edges=new_size_edges, augmentation=0)
+    # we chose the edge image to be 2x the LR image size sind  otherwise edges disappear
+    if opt.scale_edges > 1:
+        new_size_edges = opt.scale_edges * opt.img_size
+    traindataset = MedicalImageDataset3D(input_dir, mode="train", listname='data_list.txt', new_size_imgs=opt.img_size,
+                                         new_size_edges=new_size_edges, augmentation=0)
     training_data_loader = DataLoader(traindataset,
-        batch_size=batch_size, shuffle=True,
-        num_workers=8, pin_memory=False)
-    validdataset=MedicalImageDataset3D(input_dir, mode="train", listname='data_list_valid.txt', new_size_imgs=opt.img_size,
-                                       new_size_edges=new_size_edges)
+                                      batch_size=batch_size, shuffle=True,
+                                      num_workers=8, pin_memory=False)
+    validdataset = MedicalImageDataset3D(input_dir, mode="train", listname='data_list_valid.txt',
+                                         new_size_imgs=opt.img_size,
+                                         new_size_edges=new_size_edges)
     valid_data_loader = DataLoader(validdataset,
-        batch_size=1, shuffle=False,
-        num_workers=8, pin_memory=False)
-
+                                   batch_size=1, shuffle=False,
+                                   num_workers=8, pin_memory=False)
 
     print('===> Building model')
     # define nets
-    net_G=define_G_LR(1, 1, norm='instance', scale=(opt.scale_edges>1)).to(device)
-    net_D = define_D(2, 64, norm='batch', gpu_ids=[opt.device], scale=(opt.scale_edges>1)).to(device)
+    net_G = define_G_LR(1, 1, norm='instance', scale=(opt.scale_edges > 1)).to(device)
+    net_D = define_D(2, 64, norm='batch', gpu_ids=[opt.device], scale=(opt.scale_edges > 1)).to(device)
     # load weights from epoch start_epoch to start with
-    if opt.start_epoch>0:
+    if opt.start_epoch > 0:
         snapshot_str = '_epoch_' + str(opt.start_epoch) + '_size' + str(opt.img_size)
         snapshot_str_G = output_dir + '/NETG' + snapshot_str
         snapshot_str_D = output_dir + '/NETD' + snapshot_str
@@ -103,33 +103,38 @@ with torch.cuda.device(opt.device):
     print('-----------------------------------------------')
 
 # initialize validation loss with a large value
-valid_losses=[10000]
-def validate(epoch, best_epoch):
-    avg_fake_D=0
-    avg_real_D=0
-    loss_g_l1=0
+valid_losses = [10000]
 
-    for i,batch in enumerate(valid_data_loader):
+
+def validate(epoch, best_epoch):
+    avg_fake_D = 0
+    avg_real_D = 0
+    loss_g_l1 = 0
+
+    for i, batch in enumerate(valid_data_loader):
         sketch_small_real = batch['A'].cuda().to(device)
         img_small_real = batch['B'].cuda().to(device)
 
         net_G.eval()
         net_D.eval()
         prediction = net_G(sketch_small_real)
-        avg_fake_D+= torch.sigmoid(torch.mean(net_D((sketch_small_real, prediction)))).item()
-        avg_real_D+= torch.sigmoid(torch.mean(net_D((sketch_small_real, img_small_real)))).item()
+        avg_fake_D += torch.sigmoid(torch.mean(net_D((sketch_small_real, prediction)))).item()
+        avg_real_D += torch.sigmoid(torch.mean(net_D((sketch_small_real, img_small_real)))).item()
         loss_g_l1 += criterion_L1(prediction, img_small_real).item()
-        img_small_real_np=img_small_real.data[0,0,:,:,:].cpu().numpy()
-        prediction_np=np.around(prediction.data[0,0,:,:,:].cpu().numpy(),4).astype(img_small_real_np.dtype)
+        img_small_real_np = img_small_real.data[0, 0, :, :, :].cpu().numpy()
+        prediction_np = np.around(prediction.data[0, 0, :, :, :].cpu().numpy(), 4).astype(img_small_real_np.dtype)
 
         save_image(127.5 * prediction_np, val_out_dir + '/producedB_%04d_epoch_%04d.nii' % ((i + 1), epoch))
-        save_image(127.5 * (np.around(sketch_small_real.data[0, 0, :, :, :].cpu().numpy(), 4)), val_out_dir + '/originalA_%04d_epoch_%04d.nii' % ((i + 1), epoch))
-        save_image(127.5 * (img_small_real.data[0, 0, :, :, :].cpu().numpy()), val_out_dir + '/originalB_%04d_epoch_%04d.nii' % ((i + 1), epoch))
+        save_image(127.5 * (np.around(sketch_small_real.data[0, 0, :, :, :].cpu().numpy(), 4)),
+                   val_out_dir + '/originalA_%04d_epoch_%04d.nii' % ((i + 1), epoch))
+        save_image(127.5 * (img_small_real.data[0, 0, :, :, :].cpu().numpy()),
+                   val_out_dir + '/originalB_%04d_epoch_%04d.nii' % ((i + 1), epoch))
     print("Valid: ===> Avg. D fake: {:.4f} ; Avg. D real: {:.4f}; Avg. G L1: {:.4f}".
-          format(avg_fake_D/ len(valid_data_loader),avg_real_D/ len(valid_data_loader),loss_g_l1/len(valid_data_loader)))
+          format(avg_fake_D / len(valid_data_loader), avg_real_D / len(valid_data_loader),
+                 loss_g_l1 / len(valid_data_loader)))
 
-    if loss_g_l1<=min(valid_losses):
-        best_epoch=epoch
+    if loss_g_l1 <= min(valid_losses):
+        best_epoch = epoch
     valid_losses.append(loss_g_l1)
     return best_epoch
 
@@ -139,10 +144,10 @@ def train(epoch):
     for i, batch in enumerate(training_data_loader):
         sketch_small_real = batch['A'].cuda().to(device)
         img_small_real = batch['B'].cuda().to(device)
-        currbatch_size=sketch_small_real.shape[0]
-        noise=torch.empty_like(sketch_small_real).detach()
-        nn.init.normal_(noise,0,0.01)
-        sketch_small_real=sketch_small_real+noise
+        currbatch_size = sketch_small_real.shape[0]
+        noise = torch.empty_like(sketch_small_real).detach()
+        nn.init.normal_(noise, 0, 0.01)
+        sketch_small_real = sketch_small_real + noise
         # forward generator
         img_small_fake = net_G(sketch_small_real)
         ############################
@@ -177,25 +182,26 @@ def train(epoch):
         loss_g_gan = criterion_GAN(fake_D.view(currbatch_size, -1), True)
 
         # Second, G(A) = B
-        if opt.pixel_loss=='MSE':
-            pixel_loss= criterion_MSE(img_small_fake, img_small_real) * opt.lamb
+        if opt.pixel_loss == 'MSE':
+            pixel_loss = criterion_MSE(img_small_fake, img_small_real) * opt.lamb
         else:
-            pixel_loss= criterion_L1(img_small_fake, img_small_real) * opt.lamb
-        loss_g = pixel_loss+loss_g_gan
+            pixel_loss = criterion_L1(img_small_fake, img_small_real) * opt.lamb
+        loss_g = pixel_loss + loss_g_gan
         loss_g.backward()
         optimizer_G.step()
 
     print("{} ===> Epoch[{}]({}/{}): Loss_D: {:.4f} Loss_G: {:.4f}".format(
         time.ctime(time.time()), epoch, i, len(training_data_loader), loss_d.item(), loss_g.item()))
 
+
 with torch.cuda.device(opt.device):
-    best_epoch=0
-    for epoch in range(opt.start_epoch+1, opt.start_epoch+opt.n_epochs + 2):
+    best_epoch = 0
+    for epoch in range(opt.start_epoch + 1, opt.start_epoch + opt.n_epochs + 2):
         snapshot_str = '_epoch_' + str(epoch) + '_size' + str(opt.img_size)
         snapshot_str_G = output_dir + '/NETG' + snapshot_str
         snapshot_str_D = output_dir + '/NETD' + snapshot_str
         train(epoch)
-        if epoch %20== 0:
+        if epoch % 20 == 0:
             if len(valid_data_loader) > 0:
                 best_epoch = validate(epoch, best_epoch)
             if epoch == best_epoch:
@@ -209,6 +215,6 @@ with torch.cuda.device(opt.device):
             torch.save(net_D.state_dict(),
                        snapshot_str_D + '.pth')
             # early termination if no best epch appears in the last 100 epochs
-            if epoch >=300  and best_epoch <= epoch - 100:
-                    print('Early Termination at epoch: ' + str(epoch))
-                    break
+            if epoch >= 300 and best_epoch <= epoch - 100:
+                print('Early Termination at epoch: ' + str(epoch))
+                break

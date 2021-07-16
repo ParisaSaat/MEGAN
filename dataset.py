@@ -1,13 +1,13 @@
-import os, sys
-import numpy as np
 import math
-import scipy.ndimage as ndimage
-import numpy.random as random
+import os
 
+import numpy as np
+import numpy.random as random
+import scipy.ndimage as ndimage
 import torch
 from torch.utils.data import Dataset
 
-from MEGAN.image_utils import read_image
+from .image_utils import read_image
 
 
 class MedicalImageDataset3D(Dataset):
