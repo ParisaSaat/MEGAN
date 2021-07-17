@@ -31,7 +31,7 @@ def preprocess(dataset, output_dir, valid_pr, out_img_list, out_img_list_valid, 
         sketch_img = generate_sketch(image_np)
         # combine with tumor mask
         mask_np = np.maximum(np.zeros_like(mask_np), (64 * mask_np.astype('int32') - 1)) if mask is not None else None
-        sketch_img = np.maximum(sketch_img, mask_np) if mask is not None else sketch_img
+        sketch_img = np.maximum(sketch_img, mask_np.resize(np.shape(sketch_img))) if mask is not None else sketch_img
 
         sketch_path = os.path.join(output_dir, 'sketch_' + str(img_nr) + '.nii')
         save_image(sketch_img.astype('uint8'), sketch_path)
