@@ -9,7 +9,7 @@ from data.preprocess import preprocess
 parser = argparse.ArgumentParser(description='Preprocess BRATS data')
 parser.add_argument('--in_img_dir', type=str, default='../Data/ceT1_Training',
                     help='Image dir of the ceT1 images')
-parser.add_argument('--mask_dir', type=str, default='../Data/BRATS2015_Training',
+parser.add_argument('--mask_dir', type=str, default=None,
                     help='Image dir of the BRATS images')
 parser.add_argument('--out_img_dir', type=str, default='../Data/BRATST2_3D',
                     help='Output dir of preprocessed images and sketches')
