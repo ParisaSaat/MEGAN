@@ -30,7 +30,7 @@ def preprocess(dataset, output_dir, valid_pr, out_img_list, out_img_list_valid, 
         #### Sketch
         sketch_img = generate_sketch(image_np)
         # combine with tumor mask
-        if mask is not None:
+        if mask_np is not None:
             mask_np = np.maximum(np.zeros_like(mask_np), (64 * mask_np.astype('int32') - 1))
             sketch_img = np.maximum(sketch_img, mask_np.resize(np.shape(sketch_img)))
         else:
