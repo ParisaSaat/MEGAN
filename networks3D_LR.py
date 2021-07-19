@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-from MEGAN.network_utils import get_norm_layer
+from network_utils import get_norm_layer
 
 
 class UNet_G_LR(nn.Module):

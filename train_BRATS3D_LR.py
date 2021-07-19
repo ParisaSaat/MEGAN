@@ -10,18 +10,20 @@ import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from .dataset import MedicalImageDataset3D
-from MEGAN.image_utils import save_image
-from MEGAN.network_utils import print_network, set_requires_grad
-from MEGAN.networks3D_LR import define_D, GANLoss, define_G_LR
 from torch.utils.data import DataLoader
+
+from data.dataset import MedicalImageDataset3D
+from image_utils import save_image
+from network_utils import print_network, set_requires_grad
+from networks3D_LR import define_D, GANLoss, define_G_LR
 
 """Train generating scale 0. We are aiming to learn a low-resolution image (LRI) from a low-resolution image edges (LRE)"""
 # Training settings
 parser = argparse.ArgumentParser(description='Training lowest resolution')
-parser.add_argument('--data_root', type=str, default='../Data', help='root directory of the dataset')
-parser.add_argument('--results_root', type=str, default='../Results', help='root directory for saving results')
-parser.add_argument('--experiment_type', type=str, default='SKETCH2BRATST23D',
+parser.add_argument('--data_root', type=str, default='/home/par/GAN/Data', help='root directory of the dataset')
+parser.add_argument('--results_root', type=str, default='/home/par/GAN/Data/Results',
+                    help='root directory for saving results')
+parser.add_argument('--experiment_type', type=str, default='SKETCH2ceT1',
                     help='name of experiment (also name of folders)')
 parser.add_argument('--batch_size', type=int, default=1, help='training batch size')
 parser.add_argument('--img_size', type=int, default=64, help='size of downsampled image')
