@@ -1,17 +1,18 @@
 from __future__ import print_function
+
 import argparse
-import os, sys
+import os
 import time
 
 import torch
+import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.optim as optim
-import torch.backends.cudnn as cudnn
 
-from MEGAN.networks3D_HR import define_D, GANLoss, define_G
-from MEGAN.multiscale_patch_dataset import MedicalImagePatches3D, PEDataLoader
-from MEGAN.image_utils import save_image
-from MEGAN.network_utils import print_network, set_requires_grad
+from image_utils import save_image
+from multiscale_patch_dataset import MedicalImagePatches3D, PEDataLoader
+from network_utils import print_network, set_requires_grad
+from networks3D_HR import define_D, GANLoss, define_G
 
 """Train patchwise resolution upgrading for each scale>0. We are aiming to learn high resolution patches (HRP) 
 from low resolution patches (LRP) and high resolution sketch"""
@@ -21,7 +22,7 @@ parser.add_argument('--data_root', type=str, default='../Data',
                     help='root directory of the dataset')
 parser.add_argument('--results_root', type=str, default='../Results',
                     help='root directory for saving results')
-parser.add_argument('--experiment_type', type=str, default='SKETCH2BRATST23D',
+parser.add_argument('--experiment_type', type=str, default='SKETCH2ceT1',
                     help='name of experiment (also name of folders)')
 parser.add_argument('--batch_size', type=int, default=1, help='training batch size')
 parser.add_argument('--patch_size', type=int, default=32, help='training patch size')
@@ -212,7 +213,7 @@ def train(epoch):
 
 with torch.cuda.device(opt.device):
     best_epoch = 0
-    for epoch in range(opt.start_epoch+1, opt.start_epoch + opt.n_epochs + 2):
+    for epoch in range(opt.start_epoch + 1, opt.start_epoch + opt.n_epochs + 2):
         snapshot_str = '_epoch_' + str(epoch) + '_size' + str(opt.LR_size) + '_to_' + str(
             opt.HR_size) + '_' + opt.level_name
         snapshot_str_G = output_dir + '/NETG' + snapshot_str
@@ -220,7 +221,7 @@ with torch.cuda.device(opt.device):
         train(epoch)
         # validate every 20 epochs
         if epoch % 20 == 0:
-            if len(valid_data_loader)>0:
+            if len(valid_data_loader) > 0:
                 best_epoch = validate(epoch, best_epoch)
             if epoch == best_epoch:
                 torch.save(net_G.state_dict(),

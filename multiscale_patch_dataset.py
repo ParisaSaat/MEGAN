@@ -14,7 +14,7 @@ import threading
 import torch
 from torch.utils.data import Dataset
 
-from MEGAN.coords3D_utils import sample_coords, nib_load, crop_img
+from coords3D_utils import sample_coords, nib_load, crop_img
 
 np.random.seed(2017)
 
@@ -47,8 +47,6 @@ class MedicalImagePatches3D(Dataset):
         self.LR_size = LR_size
         self.HR_size = HR_size
         self.C = 1  # channels
-
-
 
     def __call__(self, index):
         return self.__getitem__(index)

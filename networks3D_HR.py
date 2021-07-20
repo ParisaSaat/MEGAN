@@ -1,9 +1,10 @@
+import numpy as np
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
-import numpy as np
 import torch.nn.functional as F
-from MEGAN.network_utils import weights_init, get_norm_layer
+from torch.autograd import Variable
+
+from network_utils import weights_init, get_norm_layer
 
 
 class UNet_G_HR(nn.Module):
