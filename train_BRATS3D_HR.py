@@ -208,7 +208,7 @@ def train(epoch):
         optimizer_G.step()
 
         print("{} ===> Epoch[{}]({}/{}): Loss_D: {:.4f} Loss_G: {:.4f}".format(
-            time.ctime(time.time()), epoch, i, len(training_data_loader), loss_d.data[0], loss_g.data[0]))
+            time.ctime(time.time()), epoch, i, len(training_data_loader), loss_d.data, loss_g.data))
 
 
 with torch.cuda.device(opt.device):
