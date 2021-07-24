@@ -13,7 +13,7 @@ parser.add_argument('--mask_dir', type=str, default=None,
                     help='Image dir of the BRATS images')
 parser.add_argument('--out_img_dir', type=str, default='../Data/BRATST2_3D',
                     help='Output dir of preprocessed images and sketches')
-parser.add_argument('--out_list_dir', type=str, default='../Data/SKETCH2BRATST23D',
+parser.add_argument('--out_list_dir', type=str, default='../Data/SKETCH2ceT1',
                     help='Output dir of images and sketches lists (training and validation)')
 parser.add_argument('--valid_pr', type=float, default=0.1, help='[0,1] percentage of images for validation')
 
