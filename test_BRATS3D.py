@@ -1,19 +1,20 @@
 from __future__ import print_function
-import argparse
-import os, sys
-import numpy as np
-import math
 
+import argparse
+import math
+import os
+
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
+from coords3D_utils import crop_img
+from coords3D_utils import get_all_coords
+from data.dataset import MedicalImageDataset3D
+from image_utils import save_image
 from networks3D_HR import define_G
 from networks3D_LR import define_G_LR
-from data.dataset import MedicalImageDataset3D
-from coords3D_utils import get_all_coords
-from image_utils import save_image
-from coords3D_utils import crop_img
 
 # Training settings
 parser = argparse.ArgumentParser(description='Test: Create high resolution images')
@@ -53,7 +54,7 @@ with torch.cuda.device(opt.device):
                                      num_workers=8, pin_memory=False)
 
     print('===> Building model')
-    LRG = define_G_LR(1, 1, norm='instance', scale=True).to(device) # low-resolution generator
+    LRG = define_G_LR(1, 1, norm='instance', scale=True).to(device)  # low-resolution generator
     LRG.load_state_dict(torch.load(os.path.join(output_dir + '_LR', 'NETG_best.pth'),
                                    map_location=lambda storage, loc: storage))
     LRG = LRG.eval()
@@ -170,7 +171,7 @@ with torch.cuda.device(opt.device):
         print(currentFilename)
         currentPatNr = currentFilename.split('_')[1].split('.')[0]
         HRE_orig = batch['A']
-        HRI_orig = batch['B']
+        # HRI_orig = batch['B']
 
         # generate scale 0
         LRE = nn.functional.interpolate(HRE_orig, (2 * opt.LR_size, 2 * opt.LR_size, 2 * opt.LR_size), mode='trilinear',
@@ -190,8 +191,8 @@ with torch.cuda.device(opt.device):
             currSize = currSize * 2
             HRE = nn.functional.interpolate(HRE_orig, (currSize, currSize, currSize), mode='trilinear',
                                             align_corners=True).float().squeeze(0)
-            HRI_real = nn.functional.interpolate(HRI_orig, (currSize, currSize, currSize), mode='trilinear',
-                                                 align_corners=True).float().squeeze(0)
+            # HRI_real = nn.functional.interpolate(HRI_orig, (currSize, currSize, currSize), mode='trilinear',
+            # align_corners=True).float().squeeze(0)
             # build hr generator network
             HRG = define_G(2, 1, 64, norm='instance').to(device)
             ckp_path = os.path.join(output_dir + '_HR' + str(l), 'NETG_best.pth')
