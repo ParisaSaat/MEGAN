@@ -7,7 +7,7 @@ import numpy as np
 from scipy.ndimage import sobel, generic_gradient_magnitude
 
 from data.dataset import VS
-from .image_utils import read_image, save_image, normalize_image
+from image_utils import read_image, save_image, normalize_image
 
 """Script for preprocessing the LPBA images. Extracting edges, cropping images, saving file lists. """
 
@@ -53,12 +53,11 @@ if __name__ == "__main__":
     hrT2_img_dir = opt.in_img_dir
     out_dir = opt.out_img_dir
     out_list_dir = opt.out_list_dir
-
+    out_list_dir = os.path.join(out_list_dir, 'A/test')
     if not os.path.exists(out_list_dir):
         os.makedirs(out_list_dir)
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
-    out_list_dir = os.path.join(out_list_dir, 'A/test')
     out_sketch_list = open(out_list_dir + '/data_list.txt', 'w')
     dataset = VS(hrT2_img_dir)
 
