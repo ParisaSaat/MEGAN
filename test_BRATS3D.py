@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 
 from networks3D_HR import define_G
 from networks3D_LR import define_G_LR
-from dataset import MedicalImageDataset3D
+from data.dataset import MedicalImageDataset3D
 from coords3D_utils import get_all_coords
 from image_utils import save_image
 from coords3D_utils import crop_img
