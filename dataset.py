@@ -7,7 +7,7 @@ import scipy.ndimage as ndimage
 import torch
 from torch.utils.data import Dataset
 
-from .image_utils import read_image
+from image_utils import read_image
 
 
 class MedicalImageDataset3D(Dataset):

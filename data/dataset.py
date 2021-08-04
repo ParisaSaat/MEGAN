@@ -68,6 +68,8 @@ class MedicalImageDataset3D(Dataset):
         self.files_A = open(os.path.join(root, 'A/%s' % mode + '/' + listname)).readlines()
         if mode != 'test':
             self.files_B = open(os.path.join(root, 'B/%s' % mode + '/' + listname)).readlines()
+        else:
+            self.files_B = self.files_A
 
         self.new_size_imgs = new_size_imgs
         self.new_size_edges = new_size_edges
@@ -133,10 +135,7 @@ class MedicalImageDataset3D(Dataset):
         """Overwrite __getitem__. Returns a dataset item at an index position.
         :return: a tuple of (item_A(sketch), item_B(image))"""
         item_A = np.array(read_image(self.files_A[index % len(self.files_A)].rstrip()))
-        if self.mode != 'test':
-            item_B = np.array(read_image(self.files_B[index % len(self.files_B)].rstrip()))
-        else:
-            item_B = item_A
+        item_B = np.array(read_image(self.files_B[index % len(self.files_B)].rstrip()))
         random.seed(None)
 
         prob = np.random.random_sample()
