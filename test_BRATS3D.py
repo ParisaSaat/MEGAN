@@ -8,12 +8,12 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from MEGAN.networks3D_HR import define_G
-from MEGAN.networks3D_LR import define_G_LR
-from MEGAN.dataset import MedicalImageDataset3D
-from MEGAN.coords3D_utils import get_all_coords
-from MEGAN.image_utils import save_image
-from MEGAN.coords3D_utils import crop_img
+from networks3D_HR import define_G
+from networks3D_LR import define_G_LR
+from dataset import MedicalImageDataset3D
+from coords3D_utils import get_all_coords
+from image_utils import save_image
+from coords3D_utils import crop_img
 
 # Training settings
 parser = argparse.ArgumentParser(description='Test: Create high resolution images')
