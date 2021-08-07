@@ -25,7 +25,7 @@ parser.add_argument('--results_root', type=str, default='../Results',
 parser.add_argument('--experiment_type', type=str, default='SKETCH2BRATST23D',
                     help='name of experiment (also name of folders)')
 parser.add_argument('--LR_size', type=int, default=32, help='LR image size (isotrop) (scale 0)')
-parser.add_argument('--HR_size', type=int, default=64, help='HR image size (isotrop) (last scale)')
+parser.add_argument('--HR_size', type=int, default=64, nargs='+',  help='HR image size (isotrop) (last scale)')
 parser.add_argument('--patch_size', type=int, default=32, help='Size of patches')
 parser.add_argument('--batch_size', type=int, default=32, help='Number patches to be loaded at once')
 parser.add_argument('--seed', type=int, default=123, help='random seed to use. Default=123')
@@ -37,7 +37,7 @@ print(opt)
 device = torch.device('cuda', opt.device)
 
 with torch.cuda.device(opt.device):
-    print('===> Loading datasets')
+    print('===> Loading datasets:', opt.HR_size)
     input_dir = os.path.join(opt.data_root, opt.experiment_type)
     output_dir = os.path.join(opt.results_root, opt.experiment_type)
     if not os.path.exists(output_dir):
@@ -119,6 +119,7 @@ def LR_to_HR(HR_size, LRI_fake, HRE, G, reception_field=20, part_size=20):
     if part_size > 1:
         n_parts = int(HREP.shape[0] / part_size)
     predictions = []
+    print("n_parts:", n_parts)
     # memory efficient
     for p in range(0, n_parts + 1):
         print('Partition: ' + str(p))
@@ -169,14 +170,16 @@ with torch.cuda.device(opt.device):
         currentFilename = os.path.basename(fileNames[i]).replace('sketch_', '')
         currentFilename = currentFilename.replace('\n', '')
         print(currentFilename)
-        currentPatNr = currentFilename.split('_')[1].split('.')[0]
+        currentPatNr = currentFilename.split('.')[0]
         HRE_orig = batch['A']
         # HRI_orig = batch['B']
 
         # generate scale 0
+        print("orig shape:", np.shape(HRE_orig))
         LRE = nn.functional.interpolate(HRE_orig, (2 * opt.LR_size, 2 * opt.LR_size, 2 * opt.LR_size), mode='trilinear',
                                         align_corners=True).float().squeeze_(0)
         LRI_fake = LRG(LRE.unsqueeze_(0).to(device))
+        print("info:", np.shape(LRI_fake), opt.LR_size)
         LRI_fake = nn.functional.interpolate(LRI_fake, (opt.LR_size, opt.LR_size, opt.LR_size), mode='trilinear',
                                              align_corners=True).float()
         LRI_fake = LRI_fake.data.cpu().numpy()[0, 0, :, :, :]
