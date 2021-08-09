@@ -32,12 +32,13 @@ parser.add_argument('--seed', type=int, default=123, help='random seed to use. D
 parser.add_argument('--device', type=int, default=0, help="Device nr (def: 0)")
 
 opt = parser.parse_args()
+HR_size = tuple(opt.HR_size)
 
 print(opt)
 device = torch.device('cuda', opt.device)
 
 with torch.cuda.device(opt.device):
-    print('===> Loading datasets:', opt.HR_size)
+    print('===> Loading datasets:', HR_size)
     input_dir = os.path.join(opt.data_root, opt.experiment_type)
     output_dir = os.path.join(opt.results_root, opt.experiment_type)
     if not os.path.exists(output_dir):
@@ -48,7 +49,7 @@ with torch.cuda.device(opt.device):
 
     # load test dataset
     HR_test_set = MedicalImageDataset3D(input_dir, mode="test", listname='data_list.txt',
-                                        new_size_imgs=opt.HR_size, new_size_edges=opt.HR_size)
+                                        new_size_imgs=HR_size, new_size_edges=HR_size)
     HR_test_data_loader = DataLoader(HR_test_set,
                                      batch_size=1, shuffle=False,
                                      num_workers=8, pin_memory=False)
@@ -94,10 +95,11 @@ def LR_to_HR(HR_size, LRI_fake, HRE, G, reception_field=20, part_size=20):
     :return stitched_HR_fake: stitched fake HR image
 
     """
+    print("Helloo")
     offset = int((opt.patch_size) / 2) - int(math.floor(reception_field / 2))
     # sample all patches of image
     coords_small = get_all_coords((reception_field, reception_field, reception_field),
-                                  (opt.patch_size, opt.patch_size, opt.patch_size), (HR_size, HR_size, HR_size), 1)
+                                  (opt.patch_size, opt.patch_size, opt.patch_size), HR_size, 1)
 
     scale_factor = HR_size / LRI_fake.shape[2]
     new_patch_size = opt.patch_size / scale_factor
