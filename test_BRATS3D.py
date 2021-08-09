@@ -24,15 +24,17 @@ parser.add_argument('--results_root', type=str, default='../Results',
                     help='root directory of results (tests and  checkpoints)')
 parser.add_argument('--experiment_type', type=str, default='SKETCH2BRATST23D',
                     help='name of experiment (also name of folders)')
-parser.add_argument('--LR_size', type=int, default=32, help='LR image size (isotrop) (scale 0)')
+parser.add_argument('--LR_size', type=int, default=32, nargs='+', help='LR image size (isotrop) (scale 0)')
 parser.add_argument('--HR_size', type=int, default=64, nargs='+',  help='HR image size (isotrop) (last scale)')
-parser.add_argument('--patch_size', type=int, default=32, help='Size of patches')
+parser.add_argument('--patch_size', type=int, default=32, nargs='+', help='Size of patches')
 parser.add_argument('--batch_size', type=int, default=32, help='Number patches to be loaded at once')
 parser.add_argument('--seed', type=int, default=123, help='random seed to use. Default=123')
 parser.add_argument('--device', type=int, default=0, help="Device nr (def: 0)")
 
 opt = parser.parse_args()
 HR_size = tuple(opt.HR_size)
+LR_size = tuple(opt.LR_size)
+patch_size = tuple(opt.patch_size)
 
 print(opt)
 device = torch.device('cuda', opt.device)
@@ -95,19 +97,21 @@ def LR_to_HR(HR_size, LRI_fake, HRE, G, reception_field=20, part_size=20):
     :return stitched_HR_fake: stitched fake HR image
 
     """
-    print("Helloo")
-    offset = int((opt.patch_size) / 2) - int(math.floor(reception_field / 2))
+    offset0 = int((patch_size[0]) / 2) - int(math.floor(reception_field / 2))
+    offset1 = int((patch_size[1]) / 2) - int(math.floor(reception_field / 2))
+    offset2 = int((patch_size[2]) / 2) - int(math.floor(reception_field / 2))
+    offset = (offset0, offset1, offset2)
     # sample all patches of image
     coords_small = get_all_coords((reception_field, reception_field, reception_field),
-                                  (opt.patch_size, opt.patch_size, opt.patch_size), HR_size, 1)
+                                  patch_size, HR_size, 1)
 
-    scale_factor = HR_size / LRI_fake.shape[2]
-    new_patch_size = opt.patch_size / scale_factor
-
+    scale_factor = (HR_size[0] / LRI_fake.shape[0], HR_size[1] / LRI_fake.shape[1], HR_size[2] / LRI_fake.shape[2])
+    new_patch_size = (patch_size[0] / scale_factor[0], patch_size[1] / scale_factor[1], patch_size[2] / scale_factor[2])
+    padding = (int(round((patch_size[0] - new_patch_size[0]) / 2.)), int(round((patch_size[1] - new_patch_size[1]) / 2.)), int(round((patch_size[2] - new_patch_size[2]) / 2)))
+    print("padding:", padding, patch_size, new_patch_size, "scale_factor:", scale_factor)
     LR_img_padded = np.pad(LRI_fake.data.cpu().numpy()[0, 0, :, :, :],
-                           int(round((opt.patch_size - new_patch_size) / 2.)),
+                           (int(round((opt.patch_size[0] - new_patch_size[0]) / 2.)), int(round((opt.patch_size[1] - new_patch_size[1]) / 2.)), int(round((opt.patch_size[2] - new_patch_size[2]) / 2.))),
                            'constant', constant_values=-1)
-
     coords_big = np.zeros_like(coords_small)
     coords_big[:, :, 0] = np.floor(coords_small[:, :, 0] / scale_factor)
     coords_big[:, :, 1] = np.floor(coords_small[:, :, 0] / scale_factor) + opt.patch_size - 1
@@ -178,23 +182,24 @@ with torch.cuda.device(opt.device):
 
         # generate scale 0
         print("orig shape:", np.shape(HRE_orig))
-        LRE = nn.functional.interpolate(HRE_orig, (2 * opt.LR_size, 2 * opt.LR_size, 2 * opt.LR_size), mode='trilinear',
+        LRE = nn.functional.interpolate(HRE_orig, (2 * LR_size[0], 2 * LR_size[1], 2 * LR_size[2]), mode='trilinear',
                                         align_corners=True).float().squeeze_(0)
         LRI_fake = LRG(LRE.unsqueeze_(0).to(device))
-        print("info:", np.shape(LRI_fake), opt.LR_size)
-        LRI_fake = nn.functional.interpolate(LRI_fake, (opt.LR_size, opt.LR_size, opt.LR_size), mode='trilinear',
+        print("info:", np.shape(LRI_fake), LR_size)
+        LRI_fake = nn.functional.interpolate(LRI_fake, LR_size, mode='trilinear',
                                              align_corners=True).float()
         LRI_fake = LRI_fake.data.cpu().numpy()[0, 0, :, :, :]
         l = 0  # level
-        currSize = opt.LR_size
+        currSize = LR_size
 
         save_image(127.5 * (LRI_fake + 1), test_output_dir + '/fake_level' + str(0) + '_%s' % currentFilename + '.gz')
 
         # generate further scales
-        while currSize < opt.HR_size:
+        print("emmmm:", currSize, HR_size)
+        while currSize < HR_size:
             l += 1
-            currSize = currSize * 2
-            HRE = nn.functional.interpolate(HRE_orig, (currSize, currSize, currSize), mode='trilinear',
+            currSize = (currSize[0] * 2, currSize[1] * 2, currSize[2] * 2)
+            HRE = nn.functional.interpolate(HRE_orig, currSize, mode='trilinear',
                                             align_corners=True).float().squeeze(0)
             # HRI_real = nn.functional.interpolate(HRI_orig, (currSize, currSize, currSize), mode='trilinear',
             # align_corners=True).float().squeeze(0)
