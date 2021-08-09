@@ -169,7 +169,7 @@ with torch.cuda.device(opt.device):
         currentFilename = os.path.basename(fileNames[i]).replace('sketch_', '')
         currentFilename = currentFilename.replace('\n', '')
         print(currentFilename)
-        currentPatNr = currentFilename.split('_')[1].split('.')[0]
+        currentPatNr = currentFilename.split('.')[0]
         HRE_orig = batch['A']
         # HRI_orig = batch['B']
 
