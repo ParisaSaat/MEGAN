@@ -135,6 +135,7 @@ class MedicalImageDataset3D(Dataset):
         """Overwrite __getitem__. Returns a dataset item at an index position.
         :return: a tuple of (item_A(sketch), item_B(image))"""
         item_A = np.array(read_image(self.files_A[index % len(self.files_A)].rstrip()))
+        print('in dataset1:', np.shape(item_A))
         item_B = np.array(read_image(self.files_B[index % len(self.files_B)].rstrip()))
         random.seed(None)
 
@@ -145,14 +146,17 @@ class MedicalImageDataset3D(Dataset):
             item_B = ndimage.affine_transform(item_B, transf_matrix)
         item_A = torch.from_numpy(item_A).unsqueeze_(0)
         item_B = torch.from_numpy(item_B).unsqueeze_(0)
+        print("in dataset3:", np.shape(item_A))
         if not self.new_size_edges is None:
             item_A = torch.nn.functional.interpolate(item_A.unsqueeze_(0), size=self.new_size_edges, mode='trilinear',
                                                      align_corners=True).float()
+        print('in dataset4:', np.shape(item_A))
         if not self.new_size_imgs is None:
             item_B = torch.nn.functional.interpolate(item_B.unsqueeze_(0), size=self.new_size_imgs, mode='trilinear',
                                                      align_corners=True).float()
         item_A = item_A / 127.5 - 1
         item_B = item_B / 127.5 - 1
+        print('in dataset2:', np.shape(item_A))
         return {'A': item_A.squeeze(0), 'B': item_B.squeeze(0)}
 
     def __len__(self):

@@ -32,7 +32,10 @@ def preprocess(dataset, output_dir, valid_pr, out_img_list, out_img_list_valid, 
         # combine with tumor mask
         if mask_np is not None:
             mask_np = np.maximum(np.zeros_like(mask_np), (64 * mask_np.astype('int32') - 1))
-            sketch_img = np.maximum(sketch_img, mask_np.resize(np.shape(sketch_img)))
+            print(type(mask_np), mask_np.dtype, sketch_img.dtype, np.shape(sketch_img), np.shape(mask_np))
+            mask_np.resize(np.shape(sketch_img))
+            print(type(mask_np), mask_np.dtype, np.shape(mask_np))
+            sketch_img = np.maximum(sketch_img, mask_np)
         else:
             sketch_img = sketch_img
 
