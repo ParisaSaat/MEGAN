@@ -78,6 +78,7 @@ def stitch_image(out_img_size, patches, coords):
     for patch_i in range(0, coords.shape[0]):
         ss = coords[patch_i, :, 0]  # slice start
         se = coords[patch_i, :, 1] + 1  # slice end
+        print("ss:", ss, "se:", se, "shape:", np.shape(np.ones(se - ss)), np.shape(norm_image[ss[0]:se[0], ss[1]:se[1], ss[2]:se[2]]), np.shape(ss), np.shape(se), np.shape(se-ss), se-ss)
         norm_image[ss[0]:se[0], ss[1]:se[1], ss[2]:se[2]] = norm_image[ss[0]:se[0], ss[1]:se[1], ss[2]:se[2]] + np.ones(
             se - ss)
         stitched_image[ss[0]:se[0], ss[1]:se[1], ss[2]:se[2]] = stitched_image[ss[0]:se[0], ss[1]:se[1],
@@ -104,20 +105,23 @@ def LR_to_HR(HR_size, LRI_fake, HRE, G, reception_field=20, part_size=20):
     # sample all patches of image
     coords_small = get_all_coords((reception_field, reception_field, reception_field),
                                   patch_size, HR_size, 1)
-
-    scale_factor = (HR_size[0] / LRI_fake.shape[0], HR_size[1] / LRI_fake.shape[1], HR_size[2] / LRI_fake.shape[2])
+    print('LRI_fake.shape:', LRI_fake.shape)
+    scale_factor = (HR_size[0] / LRI_fake.shape[2], HR_size[1] / LRI_fake.shape[3], HR_size[2] / LRI_fake.shape[4])
     new_patch_size = (patch_size[0] / scale_factor[0], patch_size[1] / scale_factor[1], patch_size[2] / scale_factor[2])
-    padding = (int(round((patch_size[0] - new_patch_size[0]) / 2.)), int(round((patch_size[1] - new_patch_size[1]) / 2.)), int(round((patch_size[2] - new_patch_size[2]) / 2)))
+    padding0 = int(round((patch_size[0] - new_patch_size[0]) / 2.))
+    padding1 = int(round((patch_size[1] - new_patch_size[1]) / 2.))
+    padding2 = int(round((patch_size[2] - new_patch_size[2]) / 2))
+    padding = ((padding0, padding0), (padding1, padding1), (padding2, padding2))
     print("padding:", padding, patch_size, new_patch_size, "scale_factor:", scale_factor)
-    LR_img_padded = np.pad(LRI_fake.data.cpu().numpy()[0, 0, :, :, :],
-                           (int(round((opt.patch_size[0] - new_patch_size[0]) / 2.)), int(round((opt.patch_size[1] - new_patch_size[1]) / 2.)), int(round((opt.patch_size[2] - new_patch_size[2]) / 2.))),
-                           'constant', constant_values=-1)
+    LRI_fake_data = LRI_fake.data.cpu().numpy()[0, 0, :, :, :]
+    print('LRI_fake_data:', np.shape(LRI_fake_data))
+    LR_img_padded = np.pad(LRI_fake_data, padding, 'constant', constant_values=-1)
     coords_big = np.zeros_like(coords_small)
     coords_big[:, :, 0] = np.floor(coords_small[:, :, 0] / scale_factor)
     coords_big[:, :, 1] = np.floor(coords_small[:, :, 0] / scale_factor) + opt.patch_size - 1
 
-    LRP_fake = crop_img(coords_big, np.expand_dims(LR_img_padded, 0), (opt.patch_size, opt.patch_size, opt.patch_size))
-    HREP = crop_img(coords_small, HRE.data.cpu().numpy(), (opt.patch_size, opt.patch_size, opt.patch_size))
+    LRP_fake = crop_img(coords_big, np.expand_dims(LR_img_padded, 0), patch_size)
+    HREP = crop_img(coords_small, HRE.data.cpu().numpy(), patch_size)
 
     LRP_fake = torch.from_numpy(LRP_fake).to(device)
     HREP = torch.from_numpy(HREP).to(device)
@@ -145,7 +149,7 @@ def LR_to_HR(HR_size, LRI_fake, HRE, G, reception_field=20, part_size=20):
     prediction = torch.cat(predictions, 0)
     prediction_np = prediction.data.cpu().numpy()
 
-    stitched_HR_fake_no_rf = stitch_image((HR_size, HR_size, HR_size), prediction_np,
+    stitched_HR_fake_no_rf = stitch_image(HR_size, prediction_np,
                                           coords_small)  # without reception field, only used for padding
 
     # coordinates with reception field
@@ -153,17 +157,17 @@ def LR_to_HR(HR_size, LRI_fake, HRE, G, reception_field=20, part_size=20):
     coords_small[:, :, 1] = coords_small[:, :, 1] - offset
     coords_np = coords_small
     ss = offset
-    se = offset + reception_field
+    se = (offset0 + reception_field, offset1 + reception_field, offset2 + reception_field)
 
-    prediction_np = prediction_np[:, :, ss:se, ss:se, ss:se]  # with reception field
-    stitched_HR_fake = stitch_image((HR_size, HR_size, HR_size), prediction_np, coords_np)
+    prediction_np = prediction_np[:, :, ss[0]:se[0], ss[1]:se[1], ss[2]:se[2]]  # with reception field
+    stitched_HR_fake = stitch_image(HR_size, prediction_np, coords_np)
     # kind of padding with so the edges have the padding artifacts without using smaller reception field
-    stitched_HR_fake[0:offset, :, :] = stitched_HR_fake_no_rf[0:offset, :, :]
-    stitched_HR_fake[:, 0:offset, :] = stitched_HR_fake_no_rf[:, 0:offset, :]
-    stitched_HR_fake[:, :, 0:offset] = stitched_HR_fake_no_rf[:, :, 0:offset]
-    stitched_HR_fake[-offset:, :, :] = stitched_HR_fake_no_rf[-offset:, :, :]
-    stitched_HR_fake[:, -offset:, :] = stitched_HR_fake_no_rf[:, -offset:, :]
-    stitched_HR_fake[:, :, -offset:] = stitched_HR_fake_no_rf[:, :, -offset:]
+    stitched_HR_fake[0:offset0, :, :] = stitched_HR_fake_no_rf[0:offset0, :, :]
+    stitched_HR_fake[:, 0:offset1, :] = stitched_HR_fake_no_rf[:, 0:offset1, :]
+    stitched_HR_fake[:, :, 0:offset2] = stitched_HR_fake_no_rf[:, :, 0:offset2]
+    stitched_HR_fake[-offset0:, :, :] = stitched_HR_fake_no_rf[-offset0:, :, :]
+    stitched_HR_fake[:, -offset1:, :] = stitched_HR_fake_no_rf[:, -offset1:, :]
+    stitched_HR_fake[:, :, -offset2:] = stitched_HR_fake_no_rf[:, :, -offset2:]
     return stitched_HR_fake
 
 
